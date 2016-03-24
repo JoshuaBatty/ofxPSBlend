@@ -183,11 +183,13 @@ static string psBlendFragShaderGL2 = "#version 120\n \
     uniform sampler2DRect base;
     uniform sampler2DRect blendTgt;
     uniform int mode;
+    uniform float opacity;
                                                                                                                                                                                                     
     void main()
     {
         vec4 baseCol = texture2DRect(base, gl_TexCoord[0].st);
         vec4 blendCol = texture2DRect(blendTgt, gl_TexCoord[0].st);
+        blendCol.rgb *= opacity;
         
         vec3 result;
         if (mode == 0)
@@ -289,6 +291,10 @@ static string psBlendFragShaderGL2 = "#version 120\n \
         else if (mode == 24)
         {
             result = BlendLuminosity(baseCol.rgb, blendCol.rgb);
+        }
+        else if (mode == 25)
+        {
+            result = mix(baseCol.rgb, blendCol.rgb,opacity);
         }
         else
         {
@@ -680,15 +686,32 @@ public:
         ofPopMatrix();
     }
     
+    void setOpacity(float _opacity)
+    {
+        opacity = _opacity;
+    }
+    
 	void draw(ofTexture& blendTgt, int blendMode = 0)
     {
 		psBlendShader.begin();
 		psBlendShader.setUniformTexture("base", base, 1);
         psBlendShader.setUniformTexture("blendTgt", blendTgt, 2);
         psBlendShader.setUniform1i("mode", blendMode);
+        psBlendShader.setUniform1f("opacity", opacity);
         drawPlane(width, height);
 		psBlendShader.end();
 	}
+    void draw(ofTexture& blendTgt, int blendMode, int x, int y, int width, int height)
+    {
+        psBlendShader.begin();
+        psBlendShader.setUniformTexture("base", base, 1);
+        psBlendShader.setUniform1i("blendTgt", 0);
+        psBlendShader.setUniform1i("mode", blendMode);
+        psBlendShader.setUniform1f("opacity", opacity);
+        ofEnableAlphaBlending();
+        blendTgt.draw(x, y, width, height);
+        psBlendShader.end();
+    }
     
     string getBlendMode(int blendMode)
     {
@@ -793,6 +816,10 @@ public:
         {
             blendName = "BlendLuminosity";
         }
+        else if (blendMode == 25)
+        {
+            blendName = "BlendOpacity";
+        }
 		return blendName;
     }
     
@@ -818,5 +845,6 @@ protected: // Dragon!
     float width;
     float height;
     ofVboMesh quad;
-    
+    float opacity;
+
 };
